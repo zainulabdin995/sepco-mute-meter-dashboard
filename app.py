@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import streamlit as st
 from PIL import Image
 import os
@@ -72,7 +71,10 @@ st.markdown("""
         border: 1px solid rgba(200, 200, 200, 0.2);
     ">
         <h3>👋 Welcome to the <strong>SEPCO Mute Meter Dashboard</strong></h3>
-        <p>This dashboard helps <b>SEPCO</b> to manage and monitor <b>mute meters</b> across the region.</p>
+        <p style="font-size: 16px;">
+            This dashboard enables the <b>SUKKUR ELECTRIC POWER COMPANY (SEPCO)</b> to efficiently manage and monitor 
+            <b>mute meters</b> across its operational regions.
+        </p>
         <p style="font-weight: bold;">Use the sidebar to:</p>
         <ul style="line-height: 1.8;">
             <li>🔍 <b>Search and edit mute reasons</b></li>
@@ -82,22 +84,3 @@ st.markdown("""
         </ul>
     </div>
 """, unsafe_allow_html=True)
-
-
-
-=======
-# 📁 File: app.py
-import streamlit as st
-
-st.set_page_config(page_title="SEPCO Dashboard", layout="wide")
-st.title("🔋 SEPCO Meter Management System")
-
-st.markdown("""
-Welcome to the SEPCO Mute Meter Dashboard System. 
-
-- Use the sidebar to:
-  - 🔍 Search and edit mute reasons
-  - 📊 View mute meter analytics
-  - 🔐 Admin login (future)
-""")
->>>>>>> 8b9251bc0ab3a524f0cfa2ead2f6818499bc58cc
