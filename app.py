@@ -77,7 +77,7 @@ with col2:
     st.markdown("""
         <div class="header-title">
             <h1>SUKKUR ELECTRIC POWER COMPANY</h1>
-            <h3>سکر الیکٹرک پاور کمپنی</h3>
+            <h2>سکر اليڪٽرڪ پاور ڪمپني</h2>
         </div>
     """, unsafe_allow_html=True)
 
