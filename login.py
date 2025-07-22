@@ -50,8 +50,8 @@ def authenticate(email, password, role):
     if role not in ["user", "admin"]:
         st.error("Invalid role selected.")
         return False
-    if not email.endswith("@sepco.com"):
-        st.error("Email must be a valid SEPCO email (e.g., user@sepco.com).")
+    if not email.endswith("@sepco.com.pk"):
+        st.error("Email must be a valid SEPCO email (e.g., user@sepco.com.pk).")
         return False
 
     db_file = "sepco_meters.db"

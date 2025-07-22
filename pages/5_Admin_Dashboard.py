@@ -2,33 +2,23 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import bcrypt
-from io import BytesIO
 from helpers.navigation import setup_navigation
 from helpers.auth import check_authentication
 
-# 1. PAGE CONFIGURATION (MUST BE FIRST)
-st.set_page_config(
-    page_title="SEPCO Dashboard - Admin Portal",
-    layout="wide"
-)
-
-# 2. AUTHENTICATION CHECK
+# PAGE CONFIG
+st.set_page_config(page_title="SEPCO Dashboard - Admin Portal", layout="wide")
 check_authentication()
 
-# 3. ADMIN ACCESS CHECK
 if st.session_state.get('user_role') != "admin":
     st.error("⛔ Access Denied: Admin privileges required")
     st.switch_page("pages/0_Welcome.py")
     st.stop()
 
-# 4. SETUP NAVIGATION
 setup_navigation()
 st.session_state.current_page = "Admin Dashboard"
-
-# 5. PAGE CONTENT
 st.title("🔐 Admin Dashboard")
 
-# Utility functions
+# Helpers
 def hash_password(password):
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
@@ -36,8 +26,7 @@ def load_filter_options():
     try:
         with sqlite3.connect("sepco_meters.db") as conn:
             df = pd.read_sql_query(
-                "SELECT Circle, Division, `Sub-Division`, Feeder FROM meter_data", 
-                conn
+                "SELECT Circle, Division, `Sub-Division`, Feeder FROM meter_data", conn
             )
         return {
             'circles': ["All"] + sorted(df['Circle'].dropna().unique().tolist()),
@@ -45,190 +34,131 @@ def load_filter_options():
             'subdivisions': ["All"] + sorted(df['Sub-Division'].dropna().unique().tolist()),
             'feeders': ["All"] + sorted(df['Feeder'].dropna().unique().tolist())
         }
-    except Exception as e:
-        st.error(f"Failed to load filter options: {str(e)}")
-        return {
-            'circles': ["All"],
-            'divisions': ["All"],
-            'subdivisions': ["All"],
-            'feeders': ["All"]
-        }
+    except:
+        return {'circles': ["All"], 'divisions': ["All"], 'subdivisions': ["All"], 'feeders': ["All"]}
 
-# Main tabs
-tab1, tab2, tab3, tab4 = st.tabs([
-    "👥 User Management", 
-    "🛠️ Mute Reason Editor", 
-    "📥 Data Import", 
-    "📤 Data Export"
-])
+# Tabs
+tab1, tab2, tab3, tab4 = st.tabs(["👥 User Management", "🛠️ Mute Reason Editor", "📥 Data Import", "📤 Data Export"])
 
 with tab1:
-    # User Management Section
     st.subheader("User Management")
-    
-    # Add New User
+
+    # Add User
     with st.expander("➕ Add New User", expanded=True):
         with st.form("add_user_form"):
-            email = st.text_input("Email", help="User's email address (must be unique)")
-            password = st.text_input("Password", type="password", help="Minimum 8 characters")
-            role = st.selectbox("Role", ["user", "admin"], help="User access level")
-            
+            email = st.text_input("Email")
+            password = st.text_input("Password", type="password")
+            role = st.selectbox("Role", ["user", "admin"])
             filters = load_filter_options()
             col1, col2 = st.columns(2)
             with col1:
-                circle = st.selectbox("Circle Access", filters['circles'])
-                division = st.selectbox("Division Access", filters['divisions'])
+                circle = st.selectbox("Circle", filters['circles'])
+                division = st.selectbox("Division", filters['divisions'])
             with col2:
-                subdivision = st.selectbox("Sub-Division Access", filters['subdivisions'])
-                feeder = st.selectbox("Feeder Access", filters['feeders'])
-            
+                subdivision = st.selectbox("Sub-Division", filters['subdivisions'])
+                feeder = st.selectbox("Feeder", filters['feeders'])
+
             if st.form_submit_button("Add User"):
                 if len(password) < 8:
                     st.error("Password must be at least 8 characters")
                 else:
                     try:
-                        hashed_password = hash_password(password)
+                        hashed = hash_password(password)
                         with sqlite3.connect("sepco_meters.db") as conn:
-                            conn.execute(
-                                """INSERT INTO users 
-                                (email, password, role, circle, division, subdivision, feeder) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                                (
-                                    email.strip(), 
-                                    hashed_password, 
-                                    role, 
-                                    None if circle == "All" else circle,
-                                    None if division == "All" else division, 
-                                    None if subdivision == "All" else subdivision,
-                                    None if feeder == "All" else feeder
-                                )
-                            )
+                            conn.execute("""
+                                INSERT INTO users (email, password, role, circle, division, subdivision, feeder)
+                                VALUES (?, ?, ?, ?, ?, ?, ?)
+                            """, (
+                                email.strip(), hashed, role,
+                                None if circle == "All" else circle,
+                                None if division == "All" else division,
+                                None if subdivision == "All" else subdivision,
+                                None if feeder == "All" else feeder
+                            ))
                             conn.commit()
-                        st.success("✅ User added successfully")
+                        st.success("✅ User added")
                         st.rerun()
                     except sqlite3.IntegrityError:
                         st.error("❌ Email already exists")
                     except Exception as e:
-                        st.error(f"❌ Error adding user: {str(e)}")
+                        st.error(str(e))
 
-    # View/Edit/Delete Users
+    # View/Edit/Delete
     with st.expander("📋 View/Edit/Delete Users", expanded=True):
         try:
             with sqlite3.connect("sepco_meters.db") as conn:
-                users_df = pd.read_sql_query(
-                    "SELECT rowid, email, role, circle, division, subdivision, feeder FROM users", 
-                    conn
+                df = pd.read_sql_query(
+                    "SELECT id, email, role, circle, division, subdivision, feeder FROM users", conn
                 )
-            
-            st.dataframe(
-                users_df.drop(columns=['rowid']),
-                use_container_width=True,
-                height=300
-            )
-            
-            user_email = st.selectbox(
-                "Select User to Edit/Delete", 
-                users_df['email'].tolist(),
-                key="user_select"
-            )
-            
-            if user_email:
-                user = users_df[users_df['email'] == user_email].iloc[0]
+
+            st.dataframe(df.drop(columns=['id']), use_container_width=True, height=300)
+            selected_email = st.selectbox("Select User", df['email'].tolist())
+
+            if selected_email:
+                user = df[df['email'] == selected_email].iloc[0]
                 with st.form("edit_user_form"):
                     new_email = st.text_input("Email", value=user['email'])
-                    new_password = st.text_input(
-                        "New Password (leave blank to keep unchanged)", 
-                        type="password"
-                    )
-                    new_role = st.selectbox(
-                        "Role", 
-                        ["user", "admin"], 
-                        index=0 if user['role'] == "user" else 1
-                    )
-                    
+                    new_password = st.text_input("New Password (leave blank to keep)", type="password")
+                    new_role = st.selectbox("Role", ["user", "admin"], index=0 if user['role'] == "user" else 1)
                     filters = load_filter_options()
                     col1, col2 = st.columns(2)
                     with col1:
-                        new_circle = st.selectbox(
-                            "Circle Access", 
-                            filters['circles'], 
-                            index=filters['circles'].index(user['circle'] or "All")
-                        )
-                        new_division = st.selectbox(
-                            "Division Access", 
-                            filters['divisions'], 
-                            index=filters['divisions'].index(user['division'] or "All")
-                        )
+                        new_circle = st.selectbox("Circle", filters['circles'], index=filters['circles'].index(user['circle'] or "All"))
+                        new_division = st.selectbox("Division", filters['divisions'], index=filters['divisions'].index(user['division'] or "All"))
                     with col2:
-                        new_subdivision = st.selectbox(
-                            "Sub-Division Access", 
-                            filters['subdivisions'], 
-                            index=filters['subdivisions'].index(user['subdivision'] or "All")
-                        )
-                        new_feeder = st.selectbox(
-                            "Feeder Access", 
-                            filters['feeders'], 
-                            index=filters['feeders'].index(user['feeder'] or "All")
-                        )
-                    
+                        new_subdivision = st.selectbox("Sub-Division", filters['subdivisions'], index=filters['subdivisions'].index(user['subdivision'] or "All"))
+                        new_feeder = st.selectbox("Feeder", filters['feeders'], index=filters['feeders'].index(user['feeder'] or "All"))
+
                     col1, col2 = st.columns(2)
                     with col1:
                         if st.form_submit_button("Update User"):
                             try:
                                 with sqlite3.connect("sepco_meters.db") as conn:
                                     if new_password:
-                                        hashed_password = hash_password(new_password)
-                                        conn.execute(
-                                            """UPDATE users SET 
-                                            email = ?, password = ?, role = ?, 
-                                            circle = ?, division = ?, subdivision = ?, feeder = ? 
-                                            WHERE rowid = ?""",
-                                            (
-                                                new_email.strip(), hashed_password, new_role,
-                                                None if new_circle == "All" else new_circle,
-                                                None if new_division == "All" else new_division,
-                                                None if new_subdivision == "All" else new_subdivision,
-                                                None if new_feeder == "All" else new_feeder,
-                                                user['rowid']
-                                            )
-                                        )
+                                        hashed = hash_password(new_password)
+                                        conn.execute("""
+                                            UPDATE users SET email=?, password=?, role=?, circle=?, division=?, subdivision=?, feeder=?
+                                            WHERE id=?
+                                        """, (
+                                            new_email.strip(), hashed, new_role,
+                                            None if new_circle == "All" else new_circle,
+                                            None if new_division == "All" else new_division,
+                                            None if new_subdivision == "All" else new_subdivision,
+                                            None if new_feeder == "All" else new_feeder,
+                                            int(user['id'])
+                                        ))
                                     else:
-                                        conn.execute(
-                                            """UPDATE users SET 
-                                            email = ?, role = ?, 
-                                            circle = ?, division = ?, subdivision = ?, feeder = ? 
-                                            WHERE rowid = ?""",
-                                            (
-                                                new_email.strip(), new_role,
-                                                None if new_circle == "All" else new_circle,
-                                                None if new_division == "All" else new_division,
-                                                None if new_subdivision == "All" else new_subdivision,
-                                                None if new_feeder == "All" else new_feeder,
-                                                user['rowid']
-                                            )
-                                        )
+                                        conn.execute("""
+                                            UPDATE users SET email=?, role=?, circle=?, division=?, subdivision=?, feeder=?
+                                            WHERE id=?
+                                        """, (
+                                            new_email.strip(), new_role,
+                                            None if new_circle == "All" else new_circle,
+                                            None if new_division == "All" else new_division,
+                                            None if new_subdivision == "All" else new_subdivision,
+                                            None if new_feeder == "All" else new_feeder,
+                                            int(user['id'])
+                                        ))
                                     conn.commit()
-                                st.success("✅ User updated successfully")
+                                st.success("✅ User updated")
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"❌ Error updating user: {str(e)}")
-                    
+                                st.error(str(e))
+
                     with col2:
                         if st.form_submit_button("Delete User"):
                             try:
                                 with sqlite3.connect("sepco_meters.db") as conn:
-                                    conn.execute(
-                                        "DELETE FROM users WHERE rowid = ?",
-                                        (user['rowid'],)
-                                    )
+                                    conn.execute("DELETE FROM users WHERE id = ?", (int(user['id']),))
                                     conn.commit()
-                                st.success("✅ User deleted successfully")
+                                st.success("✅ User deleted")
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"❌ Error deleting user: {str(e)}")
-        
+                                st.error(str(e))
+
         except Exception as e:
-            st.error(f"❌ Error loading users: {str(e)}")
+            st.error(f"Error loading users: {str(e)}")
+
 
 with tab2:
     # Mute Reason Editor
