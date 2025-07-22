@@ -1,0 +1,8 @@
+*.db
+*.sqlite
+__pycache__/
+*.py[cod]
+.env
+secrets.*
+.DS_Store
+venv/
