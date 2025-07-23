@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import bcrypt
+from io import BytesIO 
 from helpers.navigation import setup_navigation
 from helpers.auth import check_authentication
 
